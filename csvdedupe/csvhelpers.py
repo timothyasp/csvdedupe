@@ -29,9 +29,9 @@ def preProcess(column):
 
 def readData(input_file, field_names, prefix=None):
     """
-    Read in our data from a CSV file and create a dictionary of records, 
-    where the key is a unique record ID and each value is a 
-    [frozendict](http://code.activestate.com/recipes/414283-frozen-dictionaries/) 
+    Read in our data from a CSV file and create a dictionary of records,
+    where the key is a unique record ID and each value is a
+    [frozendict](http://code.activestate.com/recipes/414283-frozen-dictionaries/)
     (hashable dictionary) of the row fields.
 
     **Currently, dedupe depends upon records' unique ids being integers
@@ -55,15 +55,17 @@ def readData(input_file, field_names, prefix=None):
 # ## Writing results
 def writeResults(clustered_dupes, input_file, output_file):
 
-    # Write our original data back out to a CSV with a new column called 
+    # Write our original data back out to a CSV with a new column called
     # 'Cluster ID' which indicates which records refer to each other.
 
     logging.info('saving results to: %s' % output_file)
 
     cluster_membership = {}
     for cluster_id, (cluster, score) in enumerate(clustered_dupes):
+        ndx = 0
         for record_id in cluster:
-            cluster_membership[record_id] = cluster_id
+            cluster_membership[record_id] = [cluster_id, score[ndx]]
+            ndx += 1
 
     unique_record_id = cluster_id + 1
 
@@ -73,22 +75,26 @@ def writeResults(clustered_dupes, input_file, output_file):
 
     heading_row = reader.next()
     heading_row.insert(0, 'Cluster ID')
+    heading_row.insert(1, 'Confidence Score')
     writer.writerow(heading_row)
 
     for row_id, row in enumerate(reader):
         if row_id in cluster_membership:
-            cluster_id = cluster_membership[row_id]
+            cluster_id = cluster_membership[row_id][0]
+            score = cluster_membership[row_id][1]
         else:
+            score = 1
             cluster_id = unique_record_id
             unique_record_id += 1
         row.insert(0, cluster_id)
+        row.insert(1, score)
         writer.writerow(row)
 
 
 # ## Writing results
 def writeUniqueResults(clustered_dupes, input_file, output_file):
 
-    # Write our original data back out to a CSV with a new column called 
+    # Write our original data back out to a CSV with a new column called
     # 'Cluster ID' which indicates which records refer to each other.
 
     logging.info('saving unique results to: %s' % output_file)
@@ -214,11 +220,11 @@ class CSVCommand(object) :
             help='CSV file to store deduplication results')
         self.parser.add_argument('--skip_training', action='store_true',
             help='Skip labeling examples by user and read training from training_file only')
-        self.parser.add_argument('--training_file', type=str, 
+        self.parser.add_argument('--training_file', type=str,
             help='Path to a new or existing file consisting of labeled training examples')
-        self.parser.add_argument('--sample_size', type=int, 
+        self.parser.add_argument('--sample_size', type=int,
             help='Number of random sample pairs to train off of')
-        self.parser.add_argument('--recall_weight', type=int, 
+        self.parser.add_argument('--recall_weight', type=int,
             help='Threshold that will maximize a weighted average of our precision and recall')
         self.parser.add_argument('-v', '--verbose', action='count', default=0)
 
